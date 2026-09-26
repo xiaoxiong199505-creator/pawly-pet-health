@@ -27,6 +27,7 @@ import {
   getInitialGreeting,
   buildTriageResponse,
   detectRedFlag,
+  extractSymptomKeywords,
 } from '@/lib/triage';
 import { useTriageContext } from '@/hooks/useTriageContext';
 import { useVets, useAppointments } from '@/hooks/useAppointments';
@@ -179,15 +180,19 @@ export default function TriageChat() {
       (sysText) => sysText.toLowerCase() === userText.toLowerCase()
     );
 
+    // 🛡️ 提取 NLU 语义清洗后的病症总结文本，避免长句原封不动塞进右侧卡片
+    const { cleanSummaryText } = extractSymptomKeywords(userText);
+    const summaryTextToUse = cleanSummaryText || userText;
+
     // 🛡️ 仅当非系统文本、非紧急警报激活且处于有效阶段 (1-4) 时，才更新右侧卡片病症槽位
     if (!isSystemAction && !summary.emergencyActive && stageBefore >= 1 && stageBefore <= 4) {
       setSummary((prev) => {
         newSummary = { ...prev };
         switch (stageBefore) {
-          case 1: newSummary.energy = userText; break;
-          case 2: newSummary.appetite = userText; break;
-          case 3: newSummary.stool = userText; break;
-          case 4: newSummary.duration = userText; break;
+          case 1: newSummary.energy = summaryTextToUse; break;
+          case 2: newSummary.appetite = summaryTextToUse; break;
+          case 3: newSummary.stool = summaryTextToUse; break;
+          case 4: newSummary.duration = summaryTextToUse; break;
         }
         return newSummary;
       });
