@@ -43,13 +43,13 @@ function CareScoreWidget({ score, status }: { score: number; status: string }) {
   const offset = circumference - (score / 100) * circumference;
 
   return (
-    <div className="animate-slide-up rounded-3xl border border-sage-200 bg-white p-6 shadow-sm">
+    <div className="animate-slide-up rounded-3xl border border-sage-200 bg-white p-5 md:p-6 shadow-sm">
       <div className="flex items-center gap-2 text-sage-600">
         <Sparkles className="h-4 w-4" />
         <span className="text-sm font-semibold uppercase tracking-wide">Care Score</span>
       </div>
-      <div className="mt-4 flex items-center gap-6">
-        <div className="relative h-32 w-32 shrink-0">
+      <div className="mt-4 flex flex-col sm:flex-row items-center gap-4 sm:gap-5">
+        <div className="relative h-28 w-28 sm:h-32 sm:w-32 shrink-0">
           <svg className="h-full w-full -rotate-90" viewBox="0 0 120 120">
             <circle cx="60" cy="60" r="52" fill="none" stroke="var(--sage-100)" strokeWidth="10" />
             <circle
@@ -70,16 +70,16 @@ function CareScoreWidget({ score, status }: { score: number; status: string }) {
             <span className="text-[10px] uppercase tracking-wider text-slate-400">/ 100</span>
           </div>
         </div>
-        <div className="flex-1">
-          <p className="font-display text-lg font-medium text-slate-800">{status}</p>
+        <div className="flex-1 min-w-0 text-center sm:text-left">
+          <p className="font-display text-lg font-medium text-slate-800 leading-tight">{status}</p>
           <p className="mt-1 text-sm leading-relaxed text-slate-500">
             Mochi's care routine is on track. A few upcoming reminders will keep the score steady.
           </p>
-          <div className="mt-3 flex gap-2">
-            <span className="rounded-full bg-sage-100 px-3 py-1 text-xs font-medium text-sage-700">
+          <div className="mt-3 flex flex-wrap justify-center sm:justify-start gap-1.5">
+            <span className="rounded-full bg-sage-100 px-2.5 py-1 text-xs font-medium text-sage-700">
               Vaccines current
             </span>
-            <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
+            <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
               1 reminder soon
             </span>
           </div>
@@ -110,7 +110,7 @@ function ActivityTimeline({ checkIns }: { checkIns: CheckIn[] }) {
             <div className="z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-sage-200 bg-sage-50">
               <HeartPulse className="h-3.5 w-3.5 text-sage-500" />
             </div>
-            <div className="flex-1 pb-1">
+            <div className="flex-1 min-w-0 pb-1">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-slate-700">{formatDate(ci.check_date)}</p>
                 {i === 0 && (
@@ -158,14 +158,14 @@ function RemindersList({ reminders }: { reminders: Reminder[] }) {
               key={r.id}
               className="flex items-center gap-3 rounded-2xl border border-sage-100 bg-sage-50/40 p-3 transition-colors hover:bg-sage-50"
             >
-              <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${urgent ? 'bg-amber-100 text-amber-600' : 'bg-sage-100 text-sage-600'}`}>
+              <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${urgent ? 'bg-amber-100 text-amber-600' : 'bg-sage-100 text-sage-600'}`}>
                 <Icon className="h-4 w-4" />
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-slate-700">{r.title}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-slate-700 truncate">{r.title}</p>
                 <p className="text-xs text-slate-400">{formatDate(r.due_date)}</p>
               </div>
-              <div className="text-right">
+              <div className="text-right shrink-0">
                 <span className={`text-xs font-semibold ${urgent ? 'text-amber-600' : 'text-sage-600'}`}>
                   {days > 0 ? `${days}d` : 'Due'}
                 </span>
@@ -224,11 +224,11 @@ function UpcomingAppointments({ appointments, onCancel }: { appointments: Appoin
                     <img
                       src={vet.photo_url}
                       alt={vet.full_name}
-                      className="h-10 w-10 rounded-xl object-cover"
+                      className="h-10 w-10 shrink-0 rounded-xl object-cover"
                     />
                   )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-black">{vet?.full_name ?? 'Veterinarian'}</p>
+                    <p className="text-sm font-semibold text-black truncate">{vet?.full_name ?? 'Veterinarian'}</p>
                     <p className="text-xs text-slate-500">{vet?.specialty}</p>
                     <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
                       <span className="inline-flex items-center gap-1">
@@ -247,7 +247,7 @@ function UpcomingAppointments({ appointments, onCancel }: { appointments: Appoin
                       )}
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-1">
+                  <div className="flex flex-col items-end gap-1 shrink-0">
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${days <= 3 ? 'bg-amber-100 text-amber-700' : 'bg-sage-100 text-sage-700'}`}>
                       {days > 0 ? `in ${days}d` : 'Today'}
                     </span>
@@ -296,21 +296,21 @@ export default function Dashboard() {
               <img
                 src={pet.photo_url}
                 alt={pet.name}
-                className="h-16 w-16 rounded-2xl border-2 border-white/30 object-cover shadow-md md:h-20 md:w-20"
+                className="h-16 w-16 shrink-0 rounded-2xl border-2 border-white/30 object-cover shadow-md md:h-20 md:w-20"
               />
             )}
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-medium text-sage-100">Welcome back to Pawly</p>
-              <h1 className="font-display text-2xl font-semibold md:text-3xl text-black">{pet.name}</h1>
-              <p className="mt-1 text-sm text-black/80">
+              <h1 className="font-display text-2xl font-semibold md:text-3xl text-white">{pet.name}</h1>
+              <p className="mt-1 text-sm text-sage-100">
                 {pet.species} · {pet.breed} · {pet.age_years} yrs · {pet.weight_kg} kg
               </p>
             </div>
           </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex flex-col gap-2 sm:flex-row w-full sm:w-auto">
             <Link
               to="/chat"
-              className="group inline-flex items-center gap-2 rounded-2xl bg-white/90 px-5 py-3 text-sm font-semibold text-sage-700 shadow-md transition-all hover:shadow-lg hover:bg-white"
+              className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-white/90 px-5 py-3 text-sm font-semibold text-sage-700 shadow-md transition-all hover:shadow-lg hover:bg-white"
             >
               <MessageCircleHeart className="h-4 w-4" />
               Triage Chat
@@ -318,7 +318,7 @@ export default function Dashboard() {
             </Link>
             <Link
               to="/book"
-              className="group inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-sage-700 shadow-md transition-all hover:shadow-lg hover:gap-3"
+              className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-sage-700 shadow-md transition-all hover:shadow-lg"
             >
               <CalendarPlus className="h-4 w-4" />
               Book Appointment
