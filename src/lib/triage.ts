@@ -103,6 +103,61 @@ export interface TriageResponse {
   isDisclaimer: boolean;
 }
 
+export interface SymptomAnalysis {
+  hasVomiting: boolean;
+  hasLethargy: boolean;
+  hasDiarrhea: boolean;
+  hasAppetiteLoss: boolean;
+  cleanSummaryText: string;
+}
+
+/**
+ * 从用户自然语言中解析出核心病症关键词
+ */
+export function extractSymptomKeywords(input: string): SymptomAnalysis {
+  const lower = input.toLowerCase();
+  const hasVomiting =
+    lower.includes('thrown up') ||
+    lower.includes('vomit') ||
+    lower.includes('puke') ||
+    lower.includes('throwing up') ||
+    lower.includes('puking');
+  const hasLethargy =
+    lower.includes('lethargic') ||
+    lower.includes('tired') ||
+    lower.includes('low energy') ||
+    lower.includes('lazy') ||
+    lower.includes('sleeping all day') ||
+    lower.includes('weak');
+  const hasDiarrhea =
+    lower.includes('diarrhea') ||
+    lower.includes('loose stool') ||
+    lower.includes('watery') ||
+    lower.includes('soft stool') ||
+    lower.includes('runny');
+  const hasAppetiteLoss =
+    lower.includes("isn't eating") ||
+    lower.includes('not eating') ||
+    lower.includes('refusing food') ||
+    lower.includes('no appetite') ||
+    lower.includes('less food');
+
+  let cleanSummaryText = input.trim();
+  if (hasVomiting && !hasLethargy) cleanSummaryText = 'Reported vomiting';
+  else if (hasVomiting && hasLethargy) cleanSummaryText = 'Low energy & vomiting';
+  else if (hasLethargy) cleanSummaryText = 'Low energy / Lethargic';
+  else if (hasDiarrhea) cleanSummaryText = 'Loose stool / Diarrhea';
+  else if (hasAppetiteLoss) cleanSummaryText = 'Appetite loss / Refusing food';
+
+  return {
+    hasVomiting,
+    hasLethargy,
+    hasDiarrhea,
+    hasAppetiteLoss,
+    cleanSummaryText,
+  };
+}
+
 export function detectRedFlag(input: string): boolean {
   const lower = input.toLowerCase();
   return RED_FLAG_PATTERNS.some((p) => lower.includes(p));
@@ -168,6 +223,7 @@ export function buildTriageResponse(
 ): TriageResponse {
   const lower = userInput.toLowerCase();
 
+  // 1. 紧急红线检测
   if (detectRedFlag(lower)) {
     return {
       content: EMERGENCY_MESSAGE,
@@ -179,6 +235,7 @@ export function buildTriageResponse(
     };
   }
 
+  // 2. 医疗用药规避检测
   if (detectMedicalAdvice(lower)) {
     return {
       content: DISCLAIMER_MESSAGE,
@@ -190,40 +247,78 @@ export function buildTriageResponse(
     };
   }
 
-  const responses: Record<number, { content: string; nextStage: number; replies: string[] }> = {
-    1: {
-      content: STAGE_ENERGY_ACK,
-      nextStage: 2,
-      replies: QUICK_REPLIES_APPETITE,
-    },
-    2: {
-      content: STAGE_APPETITE_ACK,
-      nextStage: 3,
-      replies: QUICK_REPLIES_STOOL,
-    },
-    3: {
-      content: STAGE_STOOL_ACK,
-      nextStage: 4,
-      replies: QUICK_REPLIES_DURATION,
-    },
-    4: {
-      content: SUMMARY_COMPLETE,
-      nextStage: 5,
-      replies: [],
-    },
-  };
+  // 3. 语义与病症关键词分析
+  const symptoms = extractSymptomKeywords(userInput);
 
-  const entry = responses[currentStage] ?? {
-    content: "I've already completed the triage check. You can start a new check-in anytime, or head back to the dashboard.",
-    nextStage: currentStage,
-    replies: [],
-  };
+  // 4. 根据当前问诊阶段及识别出的病症进行动态回复
+  if (currentStage === 1) {
+    let ackContent = STAGE_ENERGY_ACK;
+    if (symptoms.hasVomiting) {
+      ackContent = "I've noted that Mochi threw up. Vomiting can certainly affect a pet's comfort and energy. Now, how has Mochi's appetite been since then — eating normally, eating a bit less, or refusing food?";
+    } else if (symptoms.hasLethargy) {
+      ackContent = "I've noted Mochi is feeling low on energy today. Next, how is Mochi's appetite — eating normally, a bit less, or not interested in food?";
+    }
+
+    return {
+      content: ackContent,
+      flag: 'normal',
+      stage: 2,
+      quickReplies: QUICK_REPLIES_APPETITE,
+      isEmergency: false,
+      isDisclaimer: false,
+    };
+  }
+
+  if (currentStage === 2) {
+    let ackContent = STAGE_APPETITE_ACK;
+    if (symptoms.hasAppetiteLoss) {
+      ackContent = "Got it, I've recorded Mochi's appetite changes. Next — have you noticed any changes in Mochi's stool recently?";
+    } else if (symptoms.hasVomiting) {
+      ackContent = "Got it, thank you. Alongside the vomiting, have you noticed any changes in Mochi's stool recently?";
+    }
+
+    return {
+      content: ackContent,
+      flag: 'normal',
+      stage: 3,
+      quickReplies: QUICK_REPLIES_STOOL,
+      isEmergency: false,
+      isDisclaimer: false,
+    };
+  }
+
+  if (currentStage === 3) {
+    let ackContent = STAGE_STOOL_ACK;
+    if (symptoms.hasDiarrhea) {
+      ackContent = "Thank you. I've noted the stool changes. One more question to round out the picture: how long have you been noticing these changes — did they start today, or have they been going on longer?";
+    }
+
+    return {
+      content: ackContent,
+      flag: 'normal',
+      stage: 4,
+      quickReplies: QUICK_REPLIES_DURATION,
+      isEmergency: false,
+      isDisclaimer: false,
+    };
+  }
+
+  if (currentStage === 4) {
+    return {
+      content: SUMMARY_COMPLETE,
+      flag: 'normal',
+      stage: 5,
+      quickReplies: [],
+      isEmergency: false,
+      isDisclaimer: false,
+    };
+  }
 
   return {
-    content: entry.content,
+    content: "I've already completed the triage check. You can start a new check-in anytime, or head back to the dashboard.",
     flag: 'normal',
-    stage: entry.nextStage,
-    quickReplies: entry.replies,
+    stage: currentStage,
+    quickReplies: [],
     isEmergency: false,
     isDisclaimer: false,
   };
@@ -250,18 +345,21 @@ export function updateSummaryField(
   userInput: string
 ): TriageSummary {
   const updated = { ...summary, stage };
+  const { cleanSummaryText } = extractSymptomKeywords(userInput);
+  const textToUse = cleanSummaryText || userInput;
+
   switch (stage) {
     case 1:
-      updated.energy = userInput;
+      updated.energy = textToUse;
       break;
     case 2:
-      updated.appetite = userInput;
+      updated.appetite = textToUse;
       break;
     case 3:
-      updated.stool = userInput;
+      updated.stool = textToUse;
       break;
     case 4:
-      updated.duration = userInput;
+      updated.duration = textToUse;
       break;
   }
   return updated;
@@ -273,18 +371,21 @@ export function summarizeForSummaryCard(
   stageBefore: number
 ): TriageSummary {
   const updated = { ...summary };
+  const { cleanSummaryText } = extractSymptomKeywords(userMessage);
+  const textToUse = cleanSummaryText || userMessage;
+
   switch (stageBefore) {
     case 1:
-      updated.energy = userMessage;
+      updated.energy = textToUse;
       break;
     case 2:
-      updated.appetite = userMessage;
+      updated.appetite = textToUse;
       break;
     case 3:
-      updated.stool = userMessage;
+      updated.stool = textToUse;
       break;
     case 4:
-      updated.duration = userMessage;
+      updated.duration = textToUse;
       break;
   }
   return updated;
