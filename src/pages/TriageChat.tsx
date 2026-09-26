@@ -61,6 +61,17 @@ const summaryFields = [
   { key: 'duration' as const, label: 'Duration', icon: Clock },
 ];
 
+// 需要拦截的系统按钮及确认文本列表，防止写入病症卡片
+const SYSTEM_ACTION_TEXTS = [
+  'I understand, thank you',
+  'Find Nearest ER Vet',
+  'Book This Vet Now',
+  'Directions to ER Vet',
+  'Restart',
+  'I understand',
+  'Thank you',
+];
+
 export default function TriageChat() {
   const [pet, setPet] = useState<Pet | null>(null);
   const [messages, setMessages] = useState<UIMessage[]>([]);
@@ -163,16 +174,24 @@ export default function TriageChat() {
     const stageBefore = stage;
     let newSummary = { ...summary };
 
-    setSummary((prev) => {
-      newSummary = { ...prev };
-      switch (stageBefore) {
-        case 1: newSummary.energy = userText; break;
-        case 2: newSummary.appetite = userText; break;
-        case 3: newSummary.stool = userText; break;
-        case 4: newSummary.duration = userText; break;
-      }
-      return newSummary;
-    });
+    // 检查是否为系统确认/操作按钮文本
+    const isSystemAction = SYSTEM_ACTION_TEXTS.some(
+      (sysText) => sysText.toLowerCase() === userText.toLowerCase()
+    );
+
+    // 🛡️ 仅当非系统文本、非紧急警报激活且处于有效阶段 (1-4) 时，才更新右侧卡片病症槽位
+    if (!isSystemAction && !summary.emergencyActive && stageBefore >= 1 && stageBefore <= 4) {
+      setSummary((prev) => {
+        newSummary = { ...prev };
+        switch (stageBefore) {
+          case 1: newSummary.energy = userText; break;
+          case 2: newSummary.appetite = userText; break;
+          case 3: newSummary.stool = userText; break;
+          case 4: newSummary.duration = userText; break;
+        }
+        return newSummary;
+      });
+    }
 
     const response = buildTriageResponse(userText, stageBefore, summary);
     await new Promise((r) => setTimeout(r, 900 + Math.random() * 500));
@@ -448,7 +467,6 @@ function MessageBubble({
   petName: string;
   onBookVet: (match: VetMatch) => void;
 }) {
-  // Vet recommendation card in chat
   if (message.vetRecommendation) {
     return <ChatVetCard match={message.vetRecommendation} onBook={onBookVet} />;
   }
